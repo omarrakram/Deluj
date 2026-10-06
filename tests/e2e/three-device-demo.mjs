@@ -4,6 +4,7 @@
 //   node tests/e2e/three-device-demo.mjs [baseUrl] [screenshotDir]
 import { chromium, devices } from "playwright";
 import { mkdirSync } from "node:fs";
+import { accessCookie, jsonHeaders, unlockContext } from "./access.mjs";
 
 const BASE = process.argv[2] ?? process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = process.argv[3] ?? "qa-output";
@@ -41,12 +42,15 @@ const parseMoney = (s) => Number(String(s).replace(/[^0-9]/g, ""));
 const browser = await chromium.launch();
 try {
   // Start from a clean demo day.
-  const reset = await fetch(`${BASE}/api/command`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "reset" }) });
+  const cookie = await accessCookie(BASE);
+  const reset = await fetch(`${BASE}/api/command`, { method: "POST", headers: jsonHeaders(cookie), body: JSON.stringify({ type: "reset" }) });
   if (!reset.ok) throw new Error(`reset failed: ${reset.status}`);
 
   const phoneCtx = await browser.newContext({ ...devices["iPhone 13"] });
   const tabletCtx = await browser.newContext({ viewport: { width: 1180, height: 820 }, deviceScaleFactor: 2, hasTouch: true });
   const laptopCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  await unlockContext(tabletCtx, BASE);
+  await unlockContext(laptopCtx, BASE);
   const phone = await phoneCtx.newPage();
   const tablet = await tabletCtx.newPage();
   const laptop = await laptopCtx.newPage();
@@ -159,7 +163,7 @@ try {
   await check("   A second bill tap is de-duplicated", async () => {
     const res = await fetch(`${BASE}/api/command`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(cookie),
       body: JSON.stringify({ type: "createRequest", tableCode: "table-07", kind: "bill", clientRequestId: `dup-${Date.now()}` }),
     });
     const body = await res.json();
@@ -195,7 +199,7 @@ try {
   await check("   Sold-out item cannot be ordered (server refuses)", async () => {
     const res = await fetch(`${BASE}/api/command`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(cookie),
       body: JSON.stringify({ type: "placeOrder", tableCode: "table-07", paymentMethod: "cash", clientRequestId: `so-${Date.now()}`, lines: [{ itemId: "iced-matcha", quantity: 1, selections: {} }] }),
     });
     const body = await res.json();
@@ -206,6 +210,22 @@ try {
     await phone.getByRole("button", { name: /^Iced Matcha, EGP 160$/ }).waitFor({ timeout: SYNC_TIMEOUT });
   });
   await laptop.screenshot({ path: `${OUT}/09-laptop-final.png`, fullPage: true });
+
+  await check("Reset Demo from Settings returns every screen to a fresh day", async () => {
+    await laptop.getByRole("button", { name: "Settings" }).first().click();
+    await laptop.getByTestId("reset-open").click();
+    await laptop.getByTestId("reset-confirm").click();
+    await laptop.getByText("Demo reset").first().waitFor({ timeout: 15000 });
+    await laptop.getByRole("button", { name: "Overview" }).first().click();
+    await laptop.waitForFunction(
+      ([sel, n]) => Number(document.querySelector(`[data-testid="${sel}"]`)?.textContent?.replace(/[^0-9]/g, "")) === n,
+      ["kpi-orders-value", ordersBefore],
+      { timeout: SYNC_TIMEOUT * 2 },
+    );
+    await laptop.getByTestId("floor-table-07").and(laptop.locator('[data-state="available"]')).waitFor({ timeout: SYNC_TIMEOUT });
+    await phone.getByText(`Order #${orderNumber}`).first().waitFor({ state: "detached", timeout: SYNC_TIMEOUT * 2 });
+    await tablet.getByText(`#${orderNumber} · Table 07`).first().waitFor({ state: "detached", timeout: SYNC_TIMEOUT * 2 });
+  });
 
   await check("No console errors on any device", async () => {
     const real = errors.filter((e) => !/Failed to load resource: the server responded with a status of 409/.test(e));

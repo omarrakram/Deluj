@@ -12,7 +12,8 @@ export async function POST(request: Request) {
   jar.set(ACCESS_COOKIE, accessToken(code), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Secure only over HTTPS, so the plain-HTTP LAN/hotspot backup can still sign in.
+    secure: (request.headers.get("x-forwarded-proto") ?? new URL(request.url).protocol.replace(":", "")) === "https",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });

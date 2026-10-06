@@ -6,11 +6,18 @@ import QRCode from "qrcode";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-let badgeDataUri: string | null = null;
-function badge(): string {
-  if (!badgeDataUri) {
-    const file = readFileSync(path.join(process.cwd(), "public/brand/icon-192.png"));
-    badgeDataUri = `data:image/png;base64,${file.toString("base64")}`;
+// The badge file is traced into the function bundle (see next.config.ts). If it
+// is ever missing, the QR is still rendered — just without the centre badge.
+let badgeDataUri: string | null | undefined;
+function badge(): string | null {
+  if (badgeDataUri === undefined) {
+    try {
+      const file = readFileSync(path.join(process.cwd(), "public/brand/icon-192.png"));
+      badgeDataUri = `data:image/png;base64,${file.toString("base64")}`;
+    } catch (err) {
+      console.error("[qr] badge not available, rendering without it", err);
+      badgeDataUri = null;
+    }
   }
   return badgeDataUri;
 }
@@ -21,11 +28,15 @@ export interface QrOptions {
   /** Put the real Deluj badge in the centre (uses high error correction). */
   withBadge?: boolean;
   margin?: number;
+  /** Intrinsic pixel size (sets width/height so rasterisers render at full resolution). */
+  px?: number;
 }
 
 /** Returns an SVG string. Rounded finder patterns and dot modules in brand ink. */
 export function qrSvg(text: string, opts: QrOptions = {}): string {
-  const { fg = "#231C18", bg = "#FFF7EE", withBadge = true, margin = 3 } = opts;
+  const { fg = "#231C18", bg = "#FFF7EE", margin = 3, px } = opts;
+  const badgeUri = opts.withBadge === false ? null : badge();
+  const withBadge = Boolean(badgeUri);
   const qr = QRCode.create(text, { errorCorrectionLevel: withBadge ? "H" : "M" });
   const n = qr.modules.size;
   const data = qr.modules.data;
@@ -46,14 +57,27 @@ export function qrSvg(text: string, opts: QrOptions = {}): string {
     `<rect x="${x + 0.5}" y="${y + 0.5}" width="6" height="6" rx="0.9" fill="none" stroke="${fg}" stroke-width="1"/>` +
     `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.45" fill="${fg}"/>`;
   const badgeSvg = withBadge
-    ? `<circle cx="${size / 2}" cy="${size / 2}" r="${centre / 2 + 0.6}" fill="${bg}"/><image href="${badge()}" x="${size / 2 - centre / 2}" y="${size / 2 - centre / 2}" width="${centre}" height="${centre}"/>`
+    ? `<circle cx="${size / 2}" cy="${size / 2}" r="${centre / 2 + 0.6}" fill="${bg}"/><image href="${badgeUri}" x="${size / 2 - centre / 2}" y="${size / 2 - centre / 2}" width="${centre}" height="${centre}"/>`
     : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="geometricPrecision"><rect width="${size}" height="${size}" rx="${size * 0.06}" fill="${bg}"/><g fill="${fg}">${dots}</g>${finder(margin, margin)}${finder(margin + n - 7, margin)}${finder(margin, margin + n - 7)}${badgeSvg}</svg>`;
+  const dims = px ? ` width="${px}" height="${px}"` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}"${dims} shape-rendering="geometricPrecision"><rect width="${size}" height="${size}" rx="${size * 0.06}" fill="${bg}"/><g fill="${fg}">${dots}</g>${finder(margin, margin)}${finder(margin + n - 7, margin)}${finder(margin, margin + n - 7)}${badgeSvg}</svg>`;
 }
 
-/** The public URL a table's QR should open. */
+function withScheme(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+/**
+ * The public URL a table's QR should open:
+ *   1. NEXT_PUBLIC_SITE_URL when set (custom domain),
+ *   2. on a Vercel production deployment, the project's public production domain —
+ *      never a protected per-deployment URL that would show guests a login wall,
+ *   3. otherwise the domain the card was opened on (local, LAN, previews).
+ */
 export function orderUrl(origin: string, tableCode: string): string {
-  const base = (env.siteUrl() || origin).replace(/\/+$/, "");
+  const configured = env.siteUrl();
+  const production = env.vercelEnv() === "production" ? env.vercelProductionHost() : undefined;
+  const base = (configured ? withScheme(configured) : production ? withScheme(production) : origin).replace(/\/+$/, "");
   return `${base}/order/${tableCode}`;
 }
 

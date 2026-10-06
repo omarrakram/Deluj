@@ -10,9 +10,11 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:e2e": "node tests/e2e/three-device-demo.mjs",
-    "demo:local": "next build && next start -H 0.0.0.0 -p 3000",
+    "demo:local": "npm run build && node scripts/demo-start.mjs",
     "test:resilience": "node tests/e2e/resilience.mjs",
-    "test:offline": "node tests/e2e/offline-mode.mjs"
+    "test:offline": "node tests/e2e/offline-mode.mjs",
+    "verify:production": "node scripts/verify-production.mjs",
+    "demo:start": "node scripts/demo-start.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
@@ -36,6 +38,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "jsqr": "^1.4.0",
     "playwright": "^1.56.1",
     "tailwindcss": "^4",
     "typescript": "^5",

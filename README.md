@@ -75,25 +75,32 @@ Deterministic and offline (`src/domain/recommend.ts`). It scores the live menu u
 
 A rules engine over live state (`src/domain/insights.ts`): it reacts to the order that just landed (pairings and their value), late orders, open bill requests, sold-out items, breakfast orders without a drink, Cold Foam attach rate, peak hours, direct-order share, best sellers, the highest-value iced coffee, matcha with returning guests, Breakfast Club premiums and average time-to-ready. Each rule only speaks when the data supports it.
 
-## Supabase setup (≈3 minutes)
+## Supabase setup (exact steps, ≈5 minutes)
 
-1. Create a free project at [supabase.com](https://supabase.com) — region **Frankfurt (eu-central-1)** is closest to Cairo.
-2. Open **SQL Editor**, paste the whole of [`supabase/schema.sql`](supabase/schema.sql) and run it. (Idempotent; safe to re-run.)
-3. From **Project Settings → API**, copy the project URL, the **anon / publishable** key and the **service_role / secret** key.
+1. Go to [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
+   - Name: `deluj` · Region: **Central EU (Frankfurt)** (closest to Cairo and to the Vercel functions) · Plan: Free.
+   - Set a database password (store it in your password manager; the app never needs it).
+2. When the project is ready: **SQL Editor** → **New query** → paste the **entire** contents of [`supabase/schema.sql`](supabase/schema.sql) → **Run**. Expected result: *Success. No rows returned*. (The script is idempotent; running it twice is harmless.)
+3. Check it worked: **Database → Publications → `supabase_realtime`** lists 6 tables (`activity`, `demo_meta`, `menu_items`, `orders`, `service_requests`, `table_sessions`).
+4. **Project Settings → API Keys** — copy three values:
+   - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
+   - **Publishable** key (`sb_publishable_…`; or the legacy *anon public* key) → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **Secret** key (`sb_secret_…`; or the legacy *service_role* key) → `SUPABASE_SERVICE_ROLE_KEY` — server only, never shared.
 
-The database seeds itself on the first request. Security model: the browser's anon key can only `SELECT` (needed for Realtime); all writes go through the Next.js server with the service-role key; `reset_demo` and `next_order_number` are callable by the service role only. No card data is stored.
+The database seeds itself on the first request. Security model: the browser key can only `SELECT` (Realtime needs it); every write goes through the Next.js server with the secret key; `reset_demo` and `next_order_number` are executable by the service role only. No card data is stored. Free projects pause after about a week without traffic — open the site the day before the meeting.
 
 ## Environment variables
 
-| Variable | Required | Where | Purpose |
+| Variable | Required | Where it is used | Purpose |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | for the deployed demo | browser + server | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | for the deployed demo | browser + server | anon / publishable key (read-only by RLS) |
-| `SUPABASE_SERVICE_ROLE_KEY` | for the deployed demo | **server only** | writes orders, requests and menu changes |
-| `NEXT_PUBLIC_SITE_URL` | optional | server | URL encoded in the QR card (defaults to the domain the card is opened on) |
-| `DELUJ_ACCESS_CODE` | optional | server | require a code for `/staff` and `/owner` and their write commands |
+| `NEXT_PUBLIC_SUPABASE_URL` | yes (deployed) | browser + server | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes (deployed) | browser + server | publishable / anon key — read-only by RLS (alias: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes (deployed) | **server only** | secret / service_role key — writes orders, requests, menu (alias: `SUPABASE_SECRET_KEY`) |
+| `DELUJ_ACCESS_CODE` | recommended | server | protects `/staff`, `/owner` and their actions; guests never need it |
+| `NEXT_PUBLIC_SITE_URL` | optional | server | QR target for a custom domain (on Vercel the public production domain is used automatically) |
+| `DELUJ_BACKEND=memory` | optional | server | force the in-memory backend (LAN backup) |
 
-See [`.env.example`](.env.example). Configuration is read at request time, so changing a variable only needs a redeploy/restart.
+See [`.env.example`](.env.example). Configuration is read at request time; after changing a variable on Vercel, redeploy. On Vercel, a missing Supabase variable makes `/api/health` return **503** naming what is missing, instead of silently running without sync.
 
 ## Local development
 
@@ -104,7 +111,7 @@ npm run dev                 # http://localhost:3000 — in-memory backend, no se
 
 With Supabase, put the three variables in `.env.local` first.
 
-**LAN / hotspot mode** (backup when the venue has no internet): on the laptop run `npm run demo:local`, connect the phone and tablet to the same hotspot, and open `http://<laptop-ip>:3000/...` on each device. All three stay in sync through the laptop.
+**LAN / hotspot mode** (backup when the venue has no internet): build once with `npm run build`, then `npm run demo:start` on the laptop. It forces the in-memory backend, listens on the local network and prints the exact URL for the phone, iPad and laptop. Connect all three to the same Wi-Fi or hotspot; they stay in sync through the laptop. (`npm run demo:local` builds and starts in one go.)
 
 ## Testing
 
@@ -121,17 +128,32 @@ npm run test:offline -- http://localhost:3000
 
 The three-device test drives isolated browser contexts through the whole meeting: open Table 07 → owner feed sees it → add Iced Matcha (oat, less ice) → pairing recommendation → add Maple Syrup Pancakes → pay → kitchen receives it → owner KPIs move by exactly EGP 485 → Accept / Preparing / Ready reach the phone → bill request appears on the kitchen "just now" (and a second tap is de-duplicated) → done → served → sold-out toggle reaches the phone and the server refuses to sell it → back on → no console errors. It passes against both the in-memory server and a real Supabase stack (Postgres 17 + Realtime).
 
-## Deployment (Vercel)
+## Deployment (Vercel — exact steps, ≈5 minutes)
 
-1. Push this repository to GitHub.
-2. In Vercel: **Add New → Project → Import** the repository (framework is detected).
-3. Add the three Supabase variables (and optionally `DELUJ_ACCESS_CODE`) for Production, then **Deploy**.
-4. Open `https://<your-domain>/api/health` — it should report `"backend":"supabase"`.
-5. Open `/print/table-07` on the production domain and print it: the QR encodes that domain automatically (or set `NEXT_PUBLIC_SITE_URL`).
+1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → `omarrakram/Deluj`. (If it isn't listed: *Adjust GitHub App Permissions* and grant access to the repository.)
+2. Framework preset **Next.js** (auto-detected). Leave Root Directory, Build and Output settings at their defaults.
+3. **Environment Variables** — add for **Production and Preview**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and (recommended) `DELUJ_ACCESS_CODE`.
+4. **Deploy**. Your public address is the production domain shown on the project page, e.g. `https://deluj.vercel.app` (or `https://deluj-<suffix>.vercel.app`). Use that domain — not the long per-deployment URL, which Vercel protects with a login by default.
+5. From a phone that is **not** signed in to Vercel, open `https://<production-domain>/api/health`. It must show `"ok":true,"backend":"supabase"` and a `qrTarget` on the production domain.
+6. Open `https://<production-domain>/print/table-07` and print the card (A6, or 100 % scale on A4). The QR always encodes the public production domain.
 
-`vercel.json` pins functions to Frankfurt (`fra1`) to sit next to a Frankfurt Supabase project.
+`vercel.json` runs functions in Frankfurt (`fra1`), next to a Frankfurt Supabase project. If your plan refuses the region setting, delete `vercel.json` and redeploy — everything still works. Note: Vercel's free Hobby plan is for personal, non-commercial use; client work may need Pro.
+
+### Verify production
+
+```bash
+npm ci && npx playwright install chromium  # once, on the laptop running the check
+export DELUJ_ACCESS_CODE=<your code>       # only if you set one on Vercel
+npm run verify:production -- https://<production-domain>
+```
+
+Checks `/api/health` (must say `supabase`), every route, that the Table 07 QR decodes to the production domain at several sizes, layout and console errors at phone / small-phone / tablet / desktop sizes, then runs the three-device realtime test and the network-drop resilience test against the live deployment. The realtime test starts with a demo reset, so run it before the meeting rather than during it. Add `--no-e2e` for a quick, non-destructive check.
 
 **Before the meeting:** open `/owner#settings` → Reset demo, so the seeded day and its timers start fresh.
+
+## Meeting day
+
+See [`MEETING-DAY.md`](MEETING-DAY.md) — the one page to keep open tomorrow: reset, the three URLs, device setup, the 60-second sequence and the Wi-Fi fallback.
 
 ## Future production roadmap
 

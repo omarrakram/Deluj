@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The QR routes embed the Deluj badge read from disk at runtime; make sure it
+  // always ships inside those serverless functions.
+  outputFileTracingIncludes: {
+    "/print/**": ["./public/brand/icon-192.png"],
+    "/api/health": ["./public/brand/icon-192.png"],
+  },
   async headers() {
     return [
       {
