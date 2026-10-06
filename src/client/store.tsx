@@ -44,13 +44,17 @@ export class DelujClient {
   // ── external store plumbing ──
   subscribe = (l: () => void) => {
     this.listeners.add(l);
-    return () => this.listeners.delete(l);
+    return () => {
+      this.listeners.delete(l);
+    };
   };
   getSnapshot = () => this.snap;
   /** Raw stream of applied changes (used for chimes and arrival animations). */
   onChanges(l: (changes: Change[]) => void) {
     this.changeListeners.add(l);
-    return () => this.changeListeners.delete(l);
+    return () => {
+      this.changeListeners.delete(l);
+    };
   }
   private set(patch: Partial<StoreSnapshot>) {
     this.snap = { ...this.snap, ...patch };
