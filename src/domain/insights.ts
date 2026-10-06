@@ -66,7 +66,7 @@ const liveOrder: Rule = ({ today, now }) => {
   return {
     id: `live-food-${latest.id}`,
     tone: "live",
-    title: `${where} placed a ${formatEGP(latest.total)} order`,
+    title: `${where} placed an ${formatEGP(latest.total)} order`,
     body: `It went straight from the table to the kitchen — no waiter round-trip, no re-keying.`,
     priority: 94,
   };

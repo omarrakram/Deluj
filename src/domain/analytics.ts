@@ -88,7 +88,11 @@ export function ordersByHour(state: DemoState, now: number): HourPoint[] {
   const key = cairoDateKey(now);
   const prev = Array.from({ length: 7 }, (_, i) => pastDay(addDaysToKey(key, -(i + 1))));
   const points: HourPoint[] = [];
-  for (let h = OPEN_MINUTE / 60; h < CLOSE_MINUTE / 60; h++) {
+  // Opening hours, stretched if orders exist outside them (e.g. an early demo).
+  const hours = today.map((o) => cairoHour(o.createdAt));
+  const first = Math.min(OPEN_MINUTE / 60, ...hours);
+  const last = Math.max(CLOSE_MINUTE / 60 - 1, ...hours);
+  for (let h = first; h <= last; h++) {
     const inHour = today.filter((o) => cairoHour(o.createdAt) === h);
     points.push({
       hour: h,

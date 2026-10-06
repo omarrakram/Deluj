@@ -4,7 +4,7 @@ import { animate, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 /** Counts smoothly to a new value; used for live KPIs. */
-export function AnimatedNumber({ value, format, duration = 0.9 }: { value: number; format: (n: number) => string; duration?: number }) {
+export function AnimatedNumber({ value, format, duration = 0.9, proportional = false }: { value: number; format: (n: number) => string; duration?: number; proportional?: boolean }) {
   const [display, setDisplay] = useState(value);
   const from = useRef(value);
   const reduce = useReducedMotion();
@@ -22,5 +22,5 @@ export function AnimatedNumber({ value, format, duration = 0.9 }: { value: numbe
     from.current = value;
     return () => controls.stop();
   }, [value, duration, reduce]);
-  return <span className="tabular">{format(display)}</span>;
+  return <span className={proportional ? undefined : "tabular"}>{format(display)}</span>;
 }
