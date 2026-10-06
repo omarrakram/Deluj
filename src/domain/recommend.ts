@@ -82,6 +82,15 @@ export function recommend(input: RecommendInput): Recommendation[] {
   const hasFood = cartItems.some((m) => courseOf(m.category) === "food");
   const hasDrink = cartItems.some((m) => courseOf(m.category) === "drink" && m.category !== "essentials");
   const hasSweetFood = cartItems.some((m) => courseOf(m.category) === "food" && m.tags.includes("sweet"));
+  // Balance the order: suggest a drink only while there are fewer drinks than plates, and vice versa.
+  const drinkCount = cartItemIds.filter((id) => {
+    const m = byId.get(id);
+    return m && courseOf(m.category) === "drink" && m.category !== "essentials";
+  }).length;
+  const foodCount = cartItemIds.filter((id) => {
+    const m = byId.get(id);
+    return m && courseOf(m.category) === "food";
+  }).length;
   const hour = cairoHour(now);
 
   // Most recent first; the just-added item leads.
@@ -111,6 +120,9 @@ export function recommend(input: RecommendInput): Recommendation[] {
     });
 
     const course = courseOf(candidate.category);
+    const sweetFinishCandidate = candidate.category === "pancakes" && hasFood && hasDrink && !hasSweetFood;
+    if (course === "drink" && drinkCount >= Math.max(1, foodCount)) continue;
+    if (course === "food" && foodCount >= Math.max(1, drinkCount) && !sweetFinishCandidate) continue;
     // A savoury meal with a drink can still end on something sweet.
     const sweetFinish = hasFood && hasDrink && !hasSweetFood && candidate.category === "pancakes";
     let score = best;

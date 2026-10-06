@@ -58,6 +58,12 @@ describe("Perfect with this", () => {
     expect(recs[0]?.item.category).toBe("pancakes");
   });
 
+  it("stays quiet once drinks and plates are balanced", () => {
+    expect(recommend({ menu, cartItemIds: ["iced-matcha", "maple-syrup-pancakes"], now: morning })).toEqual([]);
+    const two = recommend({ menu, cartItemIds: ["truffle-obsession", "salmon-benedict", "flat-white"], now: morning });
+    expect(two.some((r) => ["coffee", "iced", "matcha", "refreshers", "beyond"].includes(r.item.category))).toBe(true);
+  });
+
   it("is deterministic", () => {
     const a = recommend({ menu, cartItemIds: ["iced-latte"], now: afternoon });
     const b = recommend({ menu, cartItemIds: ["iced-latte"], now: afternoon });

@@ -60,7 +60,7 @@ export type ArtKind =
   | "salad"
   | "pancakes";
 
-export type ArtTone = "orange" | "powder" | "cream" | "butter" | "ink";
+export type ArtTone = "orange" | "powder" | "cream" | "peach" | "ink";
 
 export interface ArtSpec {
   kind: ArtKind;

@@ -131,7 +131,7 @@ const SEED: Seed[] = [
     category: "breakfast",
     tags: ["breakfast", "eggs", "savory", "hearty"],
     modifierGroupIds: [],
-    art: { kind: "eggs", tone: "butter", accent: "#F28C38" },
+    art: { kind: "eggs", tone: "peach", accent: "#F28C38" },
   },
   {
     id: "og-omelette",
@@ -175,7 +175,7 @@ const SEED: Seed[] = [
     category: "sandwiches",
     tags: ["sandwich", "savory", "lunch", "hearty"],
     modifierGroupIds: [],
-    art: { kind: "sandwich", tone: "butter", accent: "#E8743B" },
+    art: { kind: "sandwich", tone: "peach", accent: "#E8743B" },
   },
   {
     id: "philly-cheesesteak",
@@ -243,7 +243,7 @@ const SEED: Seed[] = [
     category: "focaccia",
     tags: ["focaccia", "savory", "lunch", "hearty", "cheese"],
     modifierGroupIds: [],
-    art: { kind: "focaccia", tone: "butter", accent: "#A8553A" },
+    art: { kind: "focaccia", tone: "peach", accent: "#A8553A" },
   },
   // ── SALADS ────────────────────────────────────────────────────────────────
   {
@@ -295,39 +295,39 @@ const SEED: Seed[] = [
   { id: "americano", name: "Americano", price: 90, category: "coffee", tags: ["coffee", "hot", "black"], modifierGroupIds: ["syrup"], art: { kind: "hot-cup", tone: "powder", accent: "#3B2418" } },
   { id: "cortado", name: "Cortado", price: 90, category: "coffee", tags: ["coffee", "hot", "milk", "espresso"], modifierGroupIds: ["milk"], art: { kind: "espresso", tone: "cream", accent: "#A8774F" } },
   { id: "flat-white", name: "Flat White", price: 115, category: "coffee", tags: ["coffee", "hot", "milk"], modifierGroupIds: ["milk", "syrup"], art: { kind: "hot-cup", tone: "orange", accent: "#C99A6E" } },
-  { id: "cappuccino", name: "Cappuccino", price: 125, category: "coffee", tags: ["coffee", "hot", "milk"], modifierGroupIds: ["milk", "syrup"], art: { kind: "hot-cup", tone: "butter", accent: "#C99A6E" } },
+  { id: "cappuccino", name: "Cappuccino", price: 125, category: "coffee", tags: ["coffee", "hot", "milk"], modifierGroupIds: ["milk", "syrup"], art: { kind: "hot-cup", tone: "peach", accent: "#C99A6E" } },
   { id: "mocha", name: "Mocha", price: 145, category: "coffee", tags: ["coffee", "hot", "milk", "chocolate", "sweet"], modifierGroupIds: ["milk"], art: { kind: "hot-cup", tone: "powder", accent: "#7A4A2E" } },
   { id: "latte", name: "Latte", price: 125, category: "coffee", tags: ["coffee", "hot", "milk"], modifierGroupIds: ["milk", "syrup"], art: { kind: "hot-cup", tone: "cream", accent: "#D8B48A" } },
   { id: "spanish-latte", name: "Spanish Latte", price: 155, category: "coffee", tags: ["coffee", "hot", "milk", "sweet"], modifierGroupIds: ["milk"], art: { kind: "hot-cup", tone: "orange", accent: "#B97E4F" } },
   { id: "macchiato", name: "Macchiato", price: 90, category: "coffee", tags: ["coffee", "hot", "milk", "espresso"], modifierGroupIds: ["milk"], art: { kind: "espresso", tone: "powder", accent: "#8A5A3A" } },
-  { id: "v60", name: "V60", price: 140, category: "coffee", tags: ["coffee", "hot", "black", "specialty"], modifierGroupIds: [], art: { kind: "hot-cup", tone: "butter", accent: "#5B3522" } },
-  { id: "turkish-coffee", name: "Turkish Coffee", price: 70, category: "coffee", tags: ["coffee", "hot", "black"], modifierGroupIds: ["sugar-turkish"], art: { kind: "espresso", tone: "butter", accent: "#3B2418" } },
+  { id: "v60", name: "V60", price: 140, category: "coffee", tags: ["coffee", "hot", "black", "specialty"], modifierGroupIds: [], art: { kind: "hot-cup", tone: "peach", accent: "#5B3522" } },
+  { id: "turkish-coffee", name: "Turkish Coffee", price: 70, category: "coffee", tags: ["coffee", "hot", "black"], modifierGroupIds: ["sugar-turkish"], art: { kind: "espresso", tone: "peach", accent: "#3B2418" } },
   // ── ICED ──────────────────────────────────────────────────────────────────
   { id: "iced-americano", name: "Iced Americano", price: 90, category: "iced", tags: ["coffee", "iced", "black"], modifierGroupIds: [...ICED, "syrup", "cold-foam"], art: { kind: "iced-cup", tone: "powder", accent: "#4A2C1C" } },
   { id: "iced-latte", name: "Iced Latte", price: 125, category: "iced", tags: ["coffee", "iced", "milk"], modifierGroupIds: [...ICED, "milk", "syrup", "cold-foam"], art: { kind: "iced-cup", tone: "orange", accent: "#C99A6E" } },
   { id: "iced-mocha", name: "Iced Mocha", price: 145, category: "iced", tags: ["coffee", "iced", "milk", "chocolate", "sweet"], modifierGroupIds: [...ICED, "milk", "cold-foam"], art: { kind: "iced-cup", tone: "cream", accent: "#7A4A2E" } },
   { id: "iced-spanish-latte", name: "Iced Spanish Latte", price: 155, category: "iced", tags: ["coffee", "iced", "milk", "sweet"], modifierGroupIds: [...ICED, "milk", "cold-foam"], art: { kind: "iced-cup", tone: "powder", accent: "#B97E4F" }, featured: true },
-  { id: "pistachio-latte", name: "Pistachio Latte", price: 155, category: "iced", tags: ["coffee", "iced", "milk", "sweet", "nutty"], modifierGroupIds: [...ICED, "milk", "cold-foam"], art: { kind: "iced-cup", tone: "butter", accent: "#A9BC6A" } },
+  { id: "pistachio-latte", name: "Pistachio Latte", price: 155, category: "iced", tags: ["coffee", "iced", "milk", "sweet", "nutty"], modifierGroupIds: [...ICED, "milk", "cold-foam"], art: { kind: "iced-cup", tone: "peach", accent: "#A9BC6A" } },
   // ── MATCHA ────────────────────────────────────────────────────────────────
   { id: "iced-matcha", name: "Iced Matcha", price: 160, category: "matcha", tags: ["matcha", "iced", "milk"], modifierGroupIds: [...ICED, "milk", "syrup", "cold-foam"], art: { kind: "iced-cup", tone: "powder", accent: "#8DB255" }, featured: true },
   { id: "strawberry-matcha", name: "Strawberry Matcha", price: 200, category: "matcha", tags: ["matcha", "iced", "milk", "fruit", "sweet"], modifierGroupIds: [...ICED, "milk", "cold-foam"], art: { kind: "iced-cup", tone: "cream", accent: "#E98AA0" } },
   { id: "matcha", name: "Matcha", price: 160, category: "matcha", tags: ["matcha", "hot", "milk"], modifierGroupIds: ["milk", "syrup"], art: { kind: "matcha", tone: "orange", accent: "#8DB255" } },
   // ── REFRESHERS ────────────────────────────────────────────────────────────
-  { id: "iced-tea", name: "Iced Tea", price: 125, category: "refreshers", tags: ["refresher", "iced", "tea"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "butter", accent: "#C76A2A" } },
+  { id: "iced-tea", name: "Iced Tea", price: 125, category: "refreshers", tags: ["refresher", "iced", "tea"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "peach", accent: "#C76A2A" } },
   { id: "passion-fruit-mojito", name: "Passion Fruit Mojito", price: 155, category: "refreshers", tags: ["refresher", "iced", "fruit"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "orange", accent: "#F2B33D" } },
   { id: "classic-mojito", name: "Classic Mojito", price: 130, category: "refreshers", tags: ["refresher", "iced", "fruit"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "powder", accent: "#BFE3A0" } },
   { id: "strawberry-mojito", name: "Strawberry Mojito", price: 160, category: "refreshers", tags: ["refresher", "iced", "fruit", "sweet"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "cream", accent: "#F07A8E" } },
-  { id: "lemon-basil-cream", name: "Lemon Basil Cream", price: 150, category: "refreshers", tags: ["refresher", "iced", "fruit", "herb"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "butter", accent: "#F3E08A" } },
+  { id: "lemon-basil-cream", name: "Lemon Basil Cream", price: 150, category: "refreshers", tags: ["refresher", "iced", "fruit", "herb"], modifierGroupIds: ICED, art: { kind: "mojito", tone: "peach", accent: "#F3E08A" } },
   // ── BEYOND COFFEE ─────────────────────────────────────────────────────────
   { id: "tea", name: "Tea", price: 55, category: "beyond", tags: ["tea", "hot"], modifierGroupIds: ["sugar"], art: { kind: "teapot", tone: "powder", accent: "#C76A2A" } },
-  { id: "chai-latte", name: "Chai Latte", price: 110, category: "beyond", tags: ["tea", "hot", "milk", "spiced"], modifierGroupIds: ["milk", "syrup"], art: { kind: "hot-cup", tone: "butter", accent: "#C8915E" } },
+  { id: "chai-latte", name: "Chai Latte", price: 110, category: "beyond", tags: ["tea", "hot", "milk", "spiced"], modifierGroupIds: ["milk", "syrup"], art: { kind: "hot-cup", tone: "peach", accent: "#C8915E" } },
   { id: "hot-chocolate", name: "Hot Chocolate", price: 135, category: "beyond", tags: ["hot", "milk", "chocolate", "sweet"], modifierGroupIds: ["milk"], art: { kind: "hot-cup", tone: "orange", accent: "#6B3A26" } },
   { id: "apple-cider", name: "Apple Cider", price: 90, category: "beyond", tags: ["hot", "fruit"], modifierGroupIds: [], art: { kind: "hot-cup", tone: "cream", accent: "#D98C3A" } },
   // ── ESSENTIALS ────────────────────────────────────────────────────────────
   { id: "red-bull", name: "Red Bull", price: 85, category: "essentials", tags: ["bottled", "energy"], modifierGroupIds: [], art: { kind: "bottle", tone: "powder", accent: "#9DB7E0" } },
   { id: "mineral-water", name: "Mineral Water", price: 30, category: "essentials", tags: ["bottled", "water"], modifierGroupIds: [], art: { kind: "bottle", tone: "cream", accent: "#CFE6F5" } },
   { id: "sparkling-water", name: "Sparkling Water", price: 70, category: "essentials", tags: ["bottled", "water"], modifierGroupIds: [], art: { kind: "bottle", tone: "orange", accent: "#BFE0F2" } },
-  { id: "juice", name: "Juice", price: 120, category: "essentials", tags: ["bottled", "fruit"], modifierGroupIds: [], art: { kind: "bottle", tone: "butter", accent: "#F7A541" } },
+  { id: "juice", name: "Juice", price: 120, category: "essentials", tags: ["bottled", "fruit"], modifierGroupIds: [], art: { kind: "bottle", tone: "peach", accent: "#F7A541" } },
 ];
 
 /**
