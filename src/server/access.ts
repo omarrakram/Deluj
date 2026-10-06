@@ -3,6 +3,7 @@
 // require a cookie proving the code was entered. Swappable for Supabase Auth
 // roles (staff / owner) without touching the screens.
 import "server-only";
+import { env } from "./env";
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { Command } from "@/domain/types";
@@ -10,8 +11,7 @@ import type { Command } from "@/domain/types";
 export const ACCESS_COOKIE = "deluj_access";
 
 export function accessCode(): string | null {
-  const code = process.env.DELUJ_ACCESS_CODE?.trim();
-  return code ? code : null;
+  return env.accessCode() ?? null;
 }
 
 export function accessToken(code: string): string {

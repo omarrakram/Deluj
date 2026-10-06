@@ -152,11 +152,26 @@ function subscribeSupabase(snapshot: Snapshot, tableCode: string | undefined, h:
       on("activity", (r) => ({ table: "activity", op: "upsert", row: activityFromRow(r) }));
       on("table_sessions", (r) => ({ table: "sessions", op: "upsert", row: sessionFromRow(r) }));
     }
+    // "SUBSCRIBED" only means the socket joined. Row changes flow once Realtime confirms
+    // "Subscribed to PostgreSQL" — on a cold project that can take a few seconds, so we
+    // only report live (which triggers a catch-up resync) after that confirmation.
+    let fallback: ReturnType<typeof setTimeout> | null = null;
+    channel.on("system" as never, {} as never, (payload: { extension?: string; status?: string }) => {
+      if (payload?.extension !== "postgres_changes") return;
+      if (fallback) clearTimeout(fallback);
+      h.onStatus(payload.status === "ok" ? "live" : "down");
+    });
     channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") h.onStatus("live");
-      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") h.onStatus("down");
+      if (status === "SUBSCRIBED") {
+        if (fallback) clearTimeout(fallback);
+        fallback = setTimeout(() => h.onStatus("live"), 5000);
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (fallback) clearTimeout(fallback);
+        h.onStatus("down");
+      }
     });
     cleanup = () => {
+      if (fallback) clearTimeout(fallback);
       sb.removeChannel(channel);
       sb.realtime.disconnect();
     };

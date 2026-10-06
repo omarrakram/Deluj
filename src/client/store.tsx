@@ -86,10 +86,10 @@ export class DelujClient {
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    // Safety net: even with a healthy socket, resync every 45 s.
+    // Safety net: even with a healthy socket, resync every 15 s while the screen is visible.
     this.safetyTimer = setInterval(() => {
       if (document.visibilityState === "visible") void this.load();
-    }, 45_000);
+    }, 15_000);
     return () => {
       this.stopped = true;
       document.removeEventListener("visibilitychange", onVisible);
@@ -152,8 +152,12 @@ export class DelujClient {
           this.set({ link: this.backend.mode === "local" ? "local" : "live" });
           if (this.pollTimer) clearTimeout(this.pollTimer);
           this.pollTimer = null;
-          // Anything missed while disconnected comes back with a resync.
-          if (was === "down" && this.snap.ready) void this.load();
+          // Anything missed while disconnected comes back with a resync — now and once more
+          // shortly after, in case the server was still warming up its change stream.
+          if (was === "down" && this.snap.ready) {
+            void this.load();
+            setTimeout(() => void this.load(), 2500);
+          }
         } else {
           this.set({ link: navigator.onLine ? "reconnecting" : "offline" });
           this.schedulePoll();

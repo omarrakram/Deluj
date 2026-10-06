@@ -2,6 +2,7 @@
 // rows are written with the service-role key (server only). Supabase Realtime
 // then streams each row change to every subscribed screen.
 import "server-only";
+import { env } from "./env";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { todaysOrders } from "@/domain/analytics";
@@ -49,7 +50,7 @@ let client: SupabaseClient | null = null;
 
 function db(): SupabaseClient {
   if (!client) {
-    client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    client = createClient(env.supabaseUrl()!, env.supabaseServiceKey()!, {
       auth: { persistSession: false, autoRefreshToken: false },
       realtime: { params: { eventsPerSecond: 0 } },
     });

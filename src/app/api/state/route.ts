@@ -1,4 +1,5 @@
 import { parseTableCode } from "@/domain/tables";
+import { env } from "@/server/env";
 import { getRepo } from "@/server/get-repo";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     const state = await repo.snapshot({ tableCode: tableCode ?? undefined });
     const supabase =
       repo.transport === "supabase"
-        ? { url: process.env.NEXT_PUBLIC_SUPABASE_URL!, anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! }
+        ? { url: env.supabaseUrl()!, anonKey: env.supabaseAnonKey()! }
         : undefined;
     return Response.json(
       { transport: repo.transport, backend: repo.kind, serverTime: Date.now(), state, supabase },

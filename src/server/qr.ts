@@ -1,5 +1,6 @@
 // Branded QR code rendering (pure SVG shapes — prints crisply, no fonts).
 import "server-only";
+import { env } from "./env";
 
 import QRCode from "qrcode";
 import { readFileSync } from "node:fs";
@@ -52,7 +53,7 @@ export function qrSvg(text: string, opts: QrOptions = {}): string {
 
 /** The public URL a table's QR should open. */
 export function orderUrl(origin: string, tableCode: string): string {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || origin).replace(/\/+$/, "");
+  const base = (env.siteUrl() || origin).replace(/\/+$/, "");
   return `${base}/order/${tableCode}`;
 }
 
