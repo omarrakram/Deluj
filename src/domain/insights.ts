@@ -42,14 +42,17 @@ const liveOrder: Rule = ({ today, now }) => {
   const drinks = latest.lines.filter((l) => courseOf(l.category) === "drink");
   const foods = latest.lines.filter((l) => courseOf(l.category) === "food");
   const p = pairingStats(today);
-  if (drinks.length && foods.length && p.drinkOnlyAov > 0) {
+  if (drinks.length && foods.length) {
     const lift = p.pairedAov - p.drinkOnlyAov;
+    const comparable = p.drinkOnlyCount >= 2 && lift > 0;
     return {
       id: `live-pair-${latest.id}`,
       tone: "live",
       title: `${where} just paired ${drinks[0].name} with ${foods[0].name}`,
-      body: `Drink-and-food orders average ${formatEGP(p.pairedAov)} today, versus ${formatEGP(p.drinkOnlyAov)} for drinks alone. Table pairings are working.`,
-      metric: `+${formatEGP(lift)} per order`,
+      body: comparable
+        ? `Drink-and-food orders average ${formatEGP(p.pairedAov)} today, versus ${formatEGP(p.drinkOnlyAov)} for drinks alone. Table pairings are working.`
+        : `A ${formatEGP(latest.total)} order straight from the table. Pairing suggestions turn a single drink into a full order.`,
+      metric: comparable ? `+${formatEGP(lift)} per order` : formatEGP(latest.total),
       priority: 100,
     };
   }

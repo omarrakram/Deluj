@@ -50,7 +50,18 @@ export function MenuView({
   const [activeCat, setActiveCat] = useState<CategoryId>(CATEGORIES[0].id);
   const sectionRefs = useRef<Partial<Record<CategoryId, HTMLElement | null>>>({});
   const railRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerH, setHeaderH] = useState(64);
   const clickScrolling = useRef(false);
+
+  // The sticky rail sits exactly under the header, whatever its height (order banner or not).
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setHeaderH(el.getBoundingClientRect().height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const sections = useMemo(
     () => CATEGORIES.map((c) => ({ ...c, items: menu.filter((m) => m.category === c.id) })).filter((s) => s.items.length),
@@ -80,11 +91,11 @@ export function MenuView({
         const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
         if (visible) setActiveCat(visible.target.getAttribute("data-cat") as CategoryId);
       },
-      { rootMargin: "-130px 0px -65% 0px" },
+      { rootMargin: `-${Math.round(headerH + 70)}px 0px -60% 0px` },
     );
     Object.values(sectionRefs.current).forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
-  }, [q, sections.length]);
+  }, [q, sections.length, headerH]);
 
   // Keep the active chip visible in the rail.
   useEffect(() => {
@@ -97,7 +108,7 @@ export function MenuView({
     if (!el) return;
     setActiveCat(id);
     clickScrolling.current = true;
-    const top = el.getBoundingClientRect().top + window.scrollY - 118;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerH - 56;
     window.scrollTo({ top, behavior: "smooth" });
     setTimeout(() => (clickScrolling.current = false), 700);
   };
@@ -105,7 +116,7 @@ export function MenuView({
   return (
     <div className="pb-36">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur-md">
+      <header ref={headerRef} className="sticky top-0 z-30 bg-cream/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-2.5">
             <Badge size={38} />
@@ -232,10 +243,7 @@ export function MenuView({
           )}
 
           {/* ── Category rail ── */}
-          <nav
-            className={`sticky z-20 mt-4 bg-cream/95 py-2.5 backdrop-blur-md ${activeOrder ? "top-[7.4rem]" : "top-[3.9rem]"}`}
-            aria-label="Menu sections"
-          >
+          <nav className="sticky z-20 mt-4 bg-cream/95 py-2.5 backdrop-blur-md" style={{ top: headerH - 1 }} aria-label="Menu sections">
             <div ref={railRef} className="no-scrollbar mx-auto flex max-w-md gap-2 overflow-x-auto px-4">
               {sections.map((c) => (
                 <button
