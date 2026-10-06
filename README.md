@@ -96,7 +96,7 @@ The database seeds itself on the first request. Security model: the browser key 
 | `NEXT_PUBLIC_SUPABASE_URL` | yes (deployed) | browser + server | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes (deployed) | browser + server | publishable / anon key — read-only by RLS (alias: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | yes (deployed) | **server only** | secret / service_role key — writes orders, requests, menu (alias: `SUPABASE_SECRET_KEY`) |
-| `DELUJ_ACCESS_CODE` | recommended | server | protects `/staff`, `/owner` and their actions; guests never need it |
+| `DELUJ_ACCESS_CODE` | yes (deployed) | server | protects `/staff`, `/owner` and their actions (Reset Demo, menu edits); guests never need it. 6+ characters |
 | `NEXT_PUBLIC_SITE_URL` | optional | server | QR target for a custom domain (on Vercel the public production domain is used automatically) |
 | `DELUJ_BACKEND=memory` | optional | server | force the in-memory backend (LAN backup) |
 
@@ -132,7 +132,7 @@ The three-device test drives isolated browser contexts through the whole meeting
 
 1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → `omarrakram/Deluj`. (If it isn't listed: *Adjust GitHub App Permissions* and grant access to the repository.)
 2. Framework preset **Next.js** (auto-detected). Leave Root Directory, Build and Output settings at their defaults.
-3. **Environment Variables** — add for **Production and Preview**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and (recommended) `DELUJ_ACCESS_CODE`.
+3. **Environment Variables** — add for **Production and Preview**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `DELUJ_ACCESS_CODE` (6+ characters; without it anyone with the URL can reset the demo).
 4. **Deploy**. Your public address is the production domain shown on the project page, e.g. `https://deluj.vercel.app` (or `https://deluj-<suffix>.vercel.app`). Use that domain — not the long per-deployment URL, which Vercel protects with a login by default.
 5. From a phone that is **not** signed in to Vercel, open `https://<production-domain>/api/health`. It must show `"ok":true,"backend":"supabase"` and a `qrTarget` on the production domain.
 6. Open `https://<production-domain>/print/table-07` and print the card (A6, or 100 % scale on A4). The QR always encodes the public production domain.
@@ -143,7 +143,7 @@ The three-device test drives isolated browser contexts through the whole meeting
 
 ```bash
 npm ci && npx playwright install chromium  # once, on the laptop running the check
-export DELUJ_ACCESS_CODE=<your code>       # only if you set one on Vercel
+export DELUJ_ACCESS_CODE=<your code>       # the same code you set on Vercel
 npm run verify:production -- https://<production-domain>
 ```
 

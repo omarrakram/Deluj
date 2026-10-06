@@ -35,6 +35,7 @@ try {
   else if (body.backend !== "supabase") warn(`/api/health ok but backend is "${body.backend}" — add the Supabase environment variables for multi-device sync`);
   else ok(`/api/health → supabase, ${body.menuItems} menu items, business day ${body.businessDate}`);
   if (body.qrTarget) console.log(`    QR target: ${body.qrTarget}`);
+  if (body.ok && !body.accessCode) warn("DELUJ_ACCESS_CODE is not set — anyone with this URL can reset the demo or edit the menu. Set it on Vercel and redeploy");
   if (body.accessCode && !ACCESS_CODE) warn("the deployment has DELUJ_ACCESS_CODE set — export it in this shell so /staff and /owner can be checked");
 } catch (e) {
   bad(`/api/health unreachable: ${e}`);

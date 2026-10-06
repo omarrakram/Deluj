@@ -6,10 +6,12 @@
 
 1. Charge phone, iPad, laptop. Do Not Disturb on all three.
 2. iPad and laptop: turn auto-lock / sleep **off**.
-3. Laptop → `https://SITE/owner` → **Settings** → **Reset demo…** → **Reset demo**.
-4. Open the three screens below. Each must show a green **Live** dot.
-5. iPad: tap **Enable chime** once. Volume up.
-6. Put the printed Table 07 card on the table.
+3. iPad and laptop: open `https://SITE/staff` and `https://SITE/owner` and enter the access code once (remembered 30 days). The phone never needs it.
+4. Laptop → `https://SITE/owner` → **Settings** → **Reset demo…** → **Reset demo**.
+5. Open the three screens below. Each must show a green **Live** dot.
+6. iPad: tap **Enable chime** once. Volume up.
+7. Laptop: also open `/order/table-07` and `/staff` once in other tabs, so the Wi-Fi fallback works offline.
+8. Put the printed Table 07 card on the table.
 
 ## How to reset
 
@@ -23,8 +25,6 @@ All three screens refresh by themselves. Do it again between rehearsals.
 | **Phone** (hand to Hosny) | Guest menu | scan the Table 07 card (= `https://SITE/order/table-07`) |
 | **iPad**, landscape, Safari | Kitchen | `https://SITE/staff` |
 | **Laptop**, Chrome, full screen | Owner | `https://SITE/owner` |
-
-If you set an access code, enter it once on the iPad and laptop (remembered 30 days). The phone never needs it.
 
 ## The 60-second demo
 
@@ -43,6 +43,7 @@ If you set an access code, enter it once on the iPad and laptop (remembered 30 d
 1. Turn on your phone's **hotspot** (4G). Join the phone, iPad and laptop to it. Reload each screen. Done.
 2. No internet at all → run the **local demo** (below) and use the laptop as the server.
 3. Only the laptop works → open three windows side by side on the laptop: `http://localhost:3000/owner`, `/staff`, `/order/table-07`.
+4. No local demo either → laptop: **Owner → Settings → Use offline mode**. The three tabs you opened in step 7 above keep working in this one browser.
 
 ## How to restart the local demo
 
