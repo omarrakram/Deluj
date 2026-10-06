@@ -173,7 +173,7 @@ function Kitchen() {
           <p className="hidden font-display text-lg font-bold sm:block">Kitchen</p>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <LinkDot status={link} dark={dark} />
-            <span className={`tabular hidden font-display text-lg font-bold md:block`}>{formatCairoTime(now)}</span>
+            <span className="tabular hidden min-w-[5.5rem] text-right font-display text-lg font-bold md:block">{now ? formatCairoTime(now) : ""}</span>
             <button
               onClick={chime.toggle}
               className={`flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition active:scale-95 ${

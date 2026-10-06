@@ -88,7 +88,7 @@ function CommandCenter() {
   );
 
   const stats = useMemo(() => {
-    if (!data) return null;
+    if (!data || !now) return null;
     const today = todaysOrders(data.orders, now);
     const hourly = ordersByHour(data, now);
     return {
@@ -161,9 +161,9 @@ function CommandCenter() {
           <>
             <section className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-ink-soft">{formatCairoDate(clock)}</p>
+                <p className="min-h-5 text-sm font-semibold text-ink-soft">{clock ? formatCairoDate(clock) : "\u00a0"}</p>
                 <h1 className="mt-0.5 font-display text-[2.1rem] font-extrabold leading-[1.05] tracking-tight sm:text-[2.75rem]" data-testid="greeting">
-                  {greetingFor(clock)}, <span className="text-orange">Hosny</span>
+                  {clock ? greetingFor(clock) : "Welcome back"}, <span className="text-orange">Hosny</span>
                 </h1>
                 <p className="mt-1 text-[15px] text-ink-soft">Here&apos;s what&apos;s happening at Deluj today.</p>
               </div>
@@ -196,8 +196,8 @@ function CommandCenter() {
 
                 <div className="mt-5 grid gap-5 xl:grid-cols-12">
                   {/* Left: analytics */}
-                  <div className="space-y-5 xl:col-span-8">
-                    <div className="grid gap-5 lg:grid-cols-2">
+                  <div className="min-w-0 space-y-5 xl:col-span-8">
+                    <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
                       <Card title="Revenue" sub="Last 14 days · today so far">
                         <ColumnChart
                           caption="Daily revenue, last 14 days"
@@ -240,7 +240,7 @@ function CommandCenter() {
                       </Card>
                     </div>
 
-                    <div className="grid gap-5 lg:grid-cols-2">
+                    <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
                       <Card title="Best sellers today" sub="By quantity">
                         <RankBars
                           caption="Best sellers today"
@@ -271,7 +271,7 @@ function CommandCenter() {
                       </Card>
                     </div>
 
-                    <div className="grid gap-5 lg:grid-cols-2">
+                    <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
                       <Card title="Menu performance" sub="Revenue by section today">
                         <RankBars
                           caption="Revenue by menu section"
@@ -304,7 +304,7 @@ function CommandCenter() {
                   </div>
 
                   {/* Right: live */}
-                  <div className="space-y-5 xl:col-span-4">
+                  <div className="order-first min-w-0 space-y-5 xl:order-none xl:col-span-4">
                     <Card
                       title="Live at Deluj"
                       sub="Every order, request and change as it happens"
@@ -314,7 +314,7 @@ function CommandCenter() {
                         </span>
                       }
                     >
-                      <div className="max-h-[34rem] overflow-y-auto pr-1">
+                      <div className="max-h-[22rem] overflow-y-auto pr-1 xl:max-h-[34rem]">
                         <LiveFeed events={data!.activity} now={clock} freshIds={freshIds} />
                       </div>
                     </Card>
@@ -392,7 +392,7 @@ function CommandCenter() {
 
 function Card({ title, sub, badge, children }: { title: string; sub?: string; badge?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl bg-white p-5 shadow-soft">
+    <section className="min-w-0 rounded-3xl bg-white p-5 shadow-soft">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-[17px] font-extrabold tracking-tight">{title}</h2>

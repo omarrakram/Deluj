@@ -4,7 +4,7 @@
 // copy of demo state, applies realtime changes, and recovers from dropped
 // connections (polling fallback, resync on focus/online, periodic safety sync).
 
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { applyChanges } from "@/domain/engine";
 import type { Change, Command, DemoState } from "@/domain/types";
 import { createBackend, type Backend, type SendResult, type Snapshot } from "./backend";
@@ -301,12 +301,18 @@ export function useDeluj() {
   return { ...snap, data, client };
 }
 
-/** A ticking clock aligned with the server (for timers and "2 min ago"). */
+/**
+ * A ticking clock aligned with the server (for timers and "2 min ago").
+ * Returns 0 during server render and hydration, so time-dependent text is only
+ * ever produced on the device — a phone with a wrong clock can't cause a mismatch.
+ */
 export function useNow(intervalMs = 1000): number {
   const client = useContext(Ctx);
-  const [now, setNow] = useState(() => (client ? client.now() : Date.now()));
-  useEffect(() => {
-    const id = setInterval(() => setNow(client ? client.now() : Date.now()), intervalMs);
+  const [now, setNow] = useState(0);
+  useLayoutEffect(() => {
+    const tick = () => setNow(client ? client.now() : Date.now());
+    tick();
+    const id = setInterval(tick, intervalMs);
     return () => clearInterval(id);
   }, [client, intervalMs]);
   return now;

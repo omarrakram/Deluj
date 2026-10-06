@@ -16,6 +16,16 @@ export const TABLE_STYLE: Record<TableState, { tile: string; dot: string }> = {
   attention: { tile: "bg-ink text-cream", dot: "bg-alert" },
 };
 
+const SHORT: Record<TableState, string> = {
+  available: "Free",
+  browsing: "Browsing",
+  ordered: "Ordered",
+  preparing: "Prep",
+  ready: "Ready",
+  dining: "Dining",
+  attention: "Help",
+};
+
 export function FloorGrid({ tables, now, large = false }: { tables: TableStatus[]; now: number; large?: boolean }) {
   return (
     <div>
@@ -36,7 +46,7 @@ export function FloorGrid({ tables, now, large = false }: { tables: TableStatus[
                 <span className={`h-2 w-2 rounded-full ${s.dot} ${t.state === "attention" || t.state === "ordered" ? "animate-blink" : ""}`} />
               </div>
               <p className={`mt-1 truncate font-semibold ${large ? "text-[13px]" : "text-[10px] uppercase tracking-wide"}`}>
-                {large ? t.detail : TABLE_STATE_LABEL[t.state]}
+                {large ? t.detail : SHORT[t.state]}
               </p>
               {large && t.state !== "available" && (
                 <p className="mt-0.5 truncate text-xs opacity-75">
