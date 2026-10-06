@@ -268,6 +268,9 @@ const ACTIVE_SPECS: ActiveSpec[] = [
   { key: "pickup", tableCode: null, channel: "pickup", via: "app", customerName: "Nour", createdAgo: 3, status: "accepted", stepsAgo: { accepted: 2 }, lines: [["iced-spanish-latte", 2, [["cold-foam", "cold-foam"]]], ["salmon-bagel", 1]], paymentMethod: "apple_pay", returning: true },
 ];
 
+/** The table on the printed QR card the guest scans in the demo. */
+const DEMO_TABLE = "table-07";
+
 const SEED_REQUESTS: Array<{ tableCode: string; kind: ServiceKind; ago: number }> = [
   { tableCode: "table-11", kind: "water", ago: 3 },
   { tableCode: "table-04", kind: "napkins", ago: 1 },
@@ -282,6 +285,8 @@ export function buildSeedState(nowMs: number, resetVersion = 1): DemoState {
 
   // History: everything up to 30 minutes ago is already served.
   const drafts = generateDayDrafts(menu, dateKey, Math.max(OPEN_MINUTE, nowMinute - 30));
+  // The demo table (the printed card) always starts free: recent history there moves next door.
+  for (const d of drafts) if (d.tableCode === DEMO_TABLE && nowMinute - d.minute < 120) d.tableCode = "table-08";
   const orders: Order[] = drafts.map((d, i) => draftToOrder(d, dateKey, i, FIRST_ORDER_NUMBER + i));
   let number = FIRST_ORDER_NUMBER + orders.length;
 

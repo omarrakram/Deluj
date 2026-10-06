@@ -217,9 +217,12 @@ try {
     await laptop.getByTestId("reset-confirm").click();
     await laptop.getByText("Demo reset").first().waitFor({ timeout: 15000 });
     await laptop.getByRole("button", { name: "Overview" }).first().click();
+    // A reset re-seeds the day up to "now", so compare with the fresh server state, not the count from the start.
+    const fresh = await fetch(`${BASE}/api/state`, { cache: "no-store" }).then((r) => r.json());
+    if (fresh.state.orders.some((o) => o.source === "live")) throw new Error("reset left live orders behind");
     await laptop.waitForFunction(
       ([sel, n]) => Number(document.querySelector(`[data-testid="${sel}"]`)?.textContent?.replace(/[^0-9]/g, "")) === n,
-      ["kpi-orders-value", ordersBefore],
+      ["kpi-orders-value", fresh.state.orders.length],
       { timeout: SYNC_TIMEOUT * 2 },
     );
     await laptop.getByTestId("floor-table-07").and(laptop.locator('[data-state="available"]')).waitFor({ timeout: SYNC_TIMEOUT });

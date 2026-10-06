@@ -37,6 +37,18 @@ describe("seeded demo state", () => {
   });
 });
 
+describe("a fresh demo day", () => {
+  it("always starts the printed Table 07 card as available, whatever time the reset happens", () => {
+    for (const day of ["2026-10-06", "2026-10-09", "2026-10-10"]) {
+      for (let minute = 7 * 60; minute < 24 * 60; minute += 5) {
+        const now = cairoWallToUtc(day, minute).getTime();
+        const state = buildSeedState(now);
+        expect(tableStatuses(state, now).find((t) => t.tableCode === "table-07")?.state, `${day} ${minute}`).toBe("available");
+      }
+    }
+  });
+});
+
 describe("the full Table 07 demo sequence", () => {
   it("updates kitchen, owner metrics and the live feed", () => {
     let s = buildSeedState(NOW);
