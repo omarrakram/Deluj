@@ -111,7 +111,10 @@ export function SettingsPanel({
         <div className="mt-5 flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-display text-lg font-bold">Offline mode on this device</p>
-            <p className="text-sm text-ink-soft">Backup for a venue without internet: open customer, kitchen and owner in tabs of this browser and they sync locally.</p>
+            <p className="text-sm text-ink-soft">
+              Last-resort backup on this one device: customer, kitchen and owner run in tabs of this browser and sync with each other, no network
+              needed. Open all three screens here once while online first.
+            </p>
           </div>
           {backend === "local" ? (
             <button

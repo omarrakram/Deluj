@@ -50,6 +50,35 @@ try {
   const [a, b] = await Promise.all([1, 2].map(() => fetch(`${BASE}/api/command`, { method: "POST", headers: jsonHeaders(null), body }).then((r) => r.json())));
   if (a.result.order.id !== b.result.order.id) throw new Error("duplicate submission created two orders");
   console.log("  ✓ a double-submitted checkout creates exactly one order");
+
+  // A guest typing special instructions must keep the keyboard while other
+  // tables' orders stream in and re-render the page (iOS would drop the keyboard).
+  const phoneCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const phone = await phoneCtx.newPage();
+  await phone.goto(`${BASE}/order/table-07`);
+  await phone.getByText("Live", { exact: true }).first().waitFor({ timeout: 15000 });
+  await phone.getByRole("button", { name: "Matcha", exact: true }).click();
+  await phone.getByRole("button", { name: /^Iced Matcha, EGP 160/ }).click();
+  await phone.locator("#item-note").click();
+  const note = "Please make it extra cold, oat milk on the side, thank you";
+  let traffic = true;
+  const busy = (async () => {
+    for (let i = 0; traffic && i < 4; i++) {
+      await fetch(`${BASE}/api/command`, {
+        method: "POST",
+        headers: jsonHeaders(null),
+        body: JSON.stringify({ type: "placeOrder", tableCode: "table-09", paymentMethod: "cash", clientRequestId: `typing-${Date.now()}-${i}`, lines: [{ itemId: "latte", quantity: 1, selections: {} }] }),
+      });
+      await new Promise((r) => setTimeout(r, 700));
+    }
+  })();
+  await phone.keyboard.type(note, { delay: 70 });
+  traffic = false;
+  await busy;
+  const typed = await phone.evaluate(() => ({ focus: document.activeElement?.id, value: document.querySelector("#item-note")?.value }));
+  if (typed.focus !== "item-note" || typed.value !== note) throw new Error(`typing lost focus: ${JSON.stringify(typed)}`);
+  console.log("  ✓ typing a note keeps focus while live orders arrive");
+  await phoneCtx.close();
 } catch (err) {
   failed = true;
   console.log(`  ✗ ${String(err).split("\n")[0]}`);

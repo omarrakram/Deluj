@@ -40,6 +40,8 @@ export interface LiveHandlers {
   onChanges(changes: Change[]): void;
   onReset(): void;
   onStatus(status: "live" | "down"): void;
+  /** The live stream became fully ready later than reported: reload to catch up. */
+  onResync?(): void;
 }
 
 export interface Backend {
@@ -59,9 +61,16 @@ export function remoteBackend(tableCode?: string): Backend {
   return {
     mode: "remote",
     async load() {
-      const res = await fetch(`/api/state${qs}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(`state ${res.status}`);
-      return (await res.json()) as Snapshot;
+      // A dead connection (phone waking up, Wi-Fi → 4G) must not hang every resync.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8_000);
+      try {
+        const res = await fetch(`/api/state${qs}`, { cache: "no-store", signal: controller.signal });
+        if (!res.ok) throw new Error(`state ${res.status}`);
+        return (await res.json()) as Snapshot;
+      } finally {
+        clearTimeout(timer);
+      }
     },
     async send(cmd) {
       const controller = new AbortController();
@@ -111,6 +120,25 @@ function subscribeSupabase(snapshot: Snapshot, tableCode: string | undefined, h:
   let closed = false;
   let cleanup = () => {};
   let resetVersion = snapshot.state.meta.resetVersion;
+
+  // Row events can arrive in bursts (a demo reset rewrites ~200 rows): apply them in batches.
+  let buffer: Change[] = [];
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  const queue = (change: Change) => {
+    buffer.push(change);
+    flushTimer ??= setTimeout(() => {
+      flushTimer = null;
+      const batch = buffer;
+      buffer = [];
+      if (batch.length && !closed) h.onChanges(batch);
+    }, 40);
+  };
+  const dropBuffer = () => {
+    buffer = [];
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = null;
+  };
+
   // Loaded lazily so guest phones on the local server never download it.
   import("@supabase/supabase-js").then(({ createClient }) => {
     if (closed) return;
@@ -119,60 +147,97 @@ function subscribeSupabase(snapshot: Snapshot, tableCode: string | undefined, h:
       realtime: { params: { eventsPerSecond: 50 } },
     });
     const filter = tableCode ? `table_code=eq.${tableCode}` : undefined;
-    const channel = sb.channel(`deluj:${tableCode ?? "all"}:${Math.random().toString(36).slice(2, 8)}`);
     type Payload = { eventType: "INSERT" | "UPDATE" | "DELETE"; new: Record<string, unknown> };
-    const on = (table: string, map: (row: Record<string, unknown>) => Change | null, withFilter = false) => {
-      channel.on(
-        "postgres_changes" as never,
-        { event: "*", schema: "public", table, ...(withFilter && filter ? { filter } : {}) } as never,
-        (payload: Payload) => {
-          if (payload.eventType === "DELETE" || !payload.new) return;
-          try {
-            const change = map(payload.new);
-            if (change) h.onChanges([change]);
-          } catch {
-            /* ignore unmappable row */
-          }
-        },
-      );
-    };
-    on("orders", (r) => ({ table: "orders", op: "upsert", row: orderFromRow(r) }), true);
-    on("service_requests", (r) => ({ table: "requests", op: "upsert", row: requestFromRow(r) }), true);
-    on("menu_items", (r) => ({ table: "menu", op: "upsert", row: menuFromRow(r) }));
-    on("demo_meta", (r) => {
-      const meta = metaFromRow(r);
-      if (meta.resetVersion !== resetVersion) {
-        resetVersion = meta.resetVersion;
-        h.onReset();
-        return null;
-      }
-      return { table: "meta", op: "upsert", row: meta };
-    });
-    if (!tableCode) {
-      on("activity", (r) => ({ table: "activity", op: "upsert", row: activityFromRow(r) }));
-      on("table_sessions", (r) => ({ table: "sessions", op: "upsert", row: sessionFromRow(r) }));
-    }
-    // "SUBSCRIBED" only means the socket joined. Row changes flow once Realtime confirms
-    // "Subscribed to PostgreSQL" — on a cold project that can take a few seconds, so we
-    // only report live (which triggers a catch-up resync) after that confirmation.
+    type Channel = ReturnType<typeof sb.channel>;
+    let channel: Channel | null = null;
     let fallback: ReturnType<typeof setTimeout> | null = null;
-    channel.on("system" as never, {} as never, (payload: { extension?: string; status?: string }) => {
-      if (payload?.extension !== "postgres_changes") return;
-      if (fallback) clearTimeout(fallback);
-      h.onStatus(payload.status === "ok" ? "live" : "down");
-    });
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        if (fallback) clearTimeout(fallback);
-        fallback = setTimeout(() => h.onStatus("live"), 5000);
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        if (fallback) clearTimeout(fallback);
-        h.onStatus("down");
+    let rejoin: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+
+    const join = () => {
+      if (closed) return;
+      const ch = sb.channel(`deluj:${tableCode ?? "all"}:${Math.random().toString(36).slice(2, 8)}`);
+      channel = ch;
+      const on = (table: string, map: (row: Record<string, unknown>) => Change | null, withFilter = false) => {
+        ch.on(
+          "postgres_changes" as never,
+          { event: "*", schema: "public", table, ...(withFilter && filter ? { filter } : {}) } as never,
+          (payload: Payload) => {
+            if (payload.eventType === "DELETE" || !payload.new) return;
+            try {
+              const change = map(payload.new);
+              if (change) queue(change);
+            } catch {
+              /* ignore unmappable row */
+            }
+          },
+        );
+      };
+      on("orders", (r) => ({ table: "orders", op: "upsert", row: orderFromRow(r) }), true);
+      on("service_requests", (r) => ({ table: "requests", op: "upsert", row: requestFromRow(r) }), true);
+      on("menu_items", (r) => ({ table: "menu", op: "upsert", row: menuFromRow(r) }));
+      on("demo_meta", (r) => {
+        const meta = metaFromRow(r);
+        if (meta.resetVersion !== resetVersion) {
+          resetVersion = meta.resetVersion;
+          dropBuffer(); // the reset reload replaces everything anyway
+          h.onReset();
+          return null;
+        }
+        return { table: "meta", op: "upsert", row: meta };
+      });
+      if (!tableCode) {
+        on("activity", (r) => ({ table: "activity", op: "upsert", row: activityFromRow(r) }));
+        on("table_sessions", (r) => ({ table: "sessions", op: "upsert", row: sessionFromRow(r) }));
       }
-    });
+      // "SUBSCRIBED" only means the socket joined. Row changes flow once Realtime confirms
+      // "Subscribed to PostgreSQL" — on a cold project that can take a few seconds, so we
+      // only report live (which triggers a catch-up resync) after that confirmation.
+      let fellBack = false;
+      ch.on("system" as never, {} as never, (payload: { extension?: string; status?: string }) => {
+        if (payload?.extension !== "postgres_changes" || channel !== ch) return;
+        if (fallback) clearTimeout(fallback);
+        if (payload.status === "ok") {
+          attempts = 0;
+          h.onStatus("live");
+          // Confirmation came after we had already assumed live: catch up on anything missed.
+          if (fellBack) h.onResync?.();
+          fellBack = false;
+        } else {
+          h.onStatus("down");
+        }
+      });
+      ch.subscribe((status) => {
+        if (channel !== ch) return;
+        if (status === "SUBSCRIBED") {
+          if (fallback) clearTimeout(fallback);
+          fallback = setTimeout(() => {
+            fellBack = true;
+            h.onStatus("live");
+          }, 5000);
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          if (fallback) clearTimeout(fallback);
+          h.onStatus("down");
+          // A channel the server closed is never rejoined automatically: build a new one.
+          if (status === "CLOSED" && !closed && !rejoin) {
+            const delay = [2000, 5000, 10000][Math.min(attempts, 2)];
+            attempts++;
+            rejoin = setTimeout(() => {
+              rejoin = null;
+              void sb.removeChannel(ch);
+              join();
+            }, delay);
+          }
+        }
+      });
+    };
+    join();
+
     cleanup = () => {
       if (fallback) clearTimeout(fallback);
-      sb.removeChannel(channel);
+      if (rejoin) clearTimeout(rejoin);
+      dropBuffer();
+      if (channel) void sb.removeChannel(channel);
       sb.realtime.disconnect();
     };
   }).catch(() => h.onStatus("down"));

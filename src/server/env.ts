@@ -23,10 +23,50 @@ export const SUPABASE_VARS = {
   serviceKey: ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"],
 } as const;
 
+/** What kind of Supabase key a value is, from its prefix or JWT role claim. */
+export function keyKind(key: string | undefined): "public" | "secret" | "unknown" {
+  if (!key) return "unknown";
+  if (key.startsWith("sb_publishable_")) return "public";
+  if (key.startsWith("sb_secret_")) return "secret";
+  const parts = key.split(".");
+  if (parts.length === 3) {
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")) as { role?: string };
+      if (payload.role === "service_role") return "secret";
+      if (payload.role === "anon") return "public";
+    } catch {
+      /* not a JWT */
+    }
+  }
+  return "unknown";
+}
+
+let warnedSwap = false;
+function warnSwap(message: string) {
+  if (warnedSwap) return;
+  warnedSwap = true;
+  console.error(`[deluj] ${message}`);
+}
+
 export const env = {
   supabaseUrl: () => first(...SUPABASE_VARS.url),
-  supabaseAnonKey: () => first(...SUPABASE_VARS.anonKey),
-  supabaseServiceKey: () => first(...SUPABASE_VARS.serviceKey),
+  /** Sent to every browser — refuses a secret key placed here by mistake. */
+  supabaseAnonKey: () => {
+    const key = first(...SUPABASE_VARS.anonKey);
+    if (keyKind(key) === "secret") {
+      warnSwap("NEXT_PUBLIC_SUPABASE_ANON_KEY holds a SECRET key. It will not be sent to browsers — use the publishable / anon key.");
+      return undefined;
+    }
+    return key;
+  },
+  supabaseServiceKey: () => {
+    const key = first(...SUPABASE_VARS.serviceKey);
+    if (keyKind(key) === "public") {
+      warnSwap("SUPABASE_SERVICE_ROLE_KEY holds the publishable / anon key. Use the secret / service_role key.");
+      return undefined;
+    }
+    return key;
+  },
   siteUrl: () => first("NEXT_PUBLIC_SITE_URL", "SITE_URL"),
   accessCode: () => read("DELUJ_ACCESS_CODE"),
   backend: () => read("DELUJ_BACKEND"),

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import jsQR from "jsqr";
 import sharp from "sharp";
-import { missingSupabaseVars } from "@/server/env";
+import { env, keyKind, missingSupabaseVars } from "@/server/env";
 import { orderUrl, originFrom, qrSvg } from "@/server/qr";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -69,5 +69,27 @@ describe("branded QR", () => {
       const { data, info } = await sharp(Buffer.from(svg)).resize(size, size).flatten({ background: "#fff" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       expect(jsQR(new Uint8ClampedArray(data), info.width, info.height)?.data).toBe(url);
     }
+  });
+});
+
+describe("Supabase key guard", () => {
+  const jwt = (role: string) => `x.${Buffer.from(JSON.stringify({ role })).toString("base64url")}.y`;
+  it("tells publishable keys from secret keys, new and legacy formats", () => {
+    expect(keyKind("sb_publishable_abc")).toBe("public");
+    expect(keyKind("sb_secret_abc")).toBe("secret");
+    expect(keyKind(jwt("anon"))).toBe("public");
+    expect(keyKind(jwt("service_role"))).toBe("secret");
+    expect(keyKind("nonsense")).toBe("unknown");
+    expect(keyKind(undefined)).toBe("unknown");
+  });
+  it("never sends a secret key to the browser when the two are swapped", () => {
+    clear();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "sb_secret_x");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "sb_publishable_x");
+    expect(env.supabaseAnonKey()).toBeUndefined();
+    expect(env.supabaseServiceKey()).toBeUndefined();
+    expect(missingSupabaseVars()).toEqual(["NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]);
   });
 });

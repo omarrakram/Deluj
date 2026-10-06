@@ -36,6 +36,11 @@ export class DelujClient {
   private loading: Promise<void> | null = null;
   private liveStatus: "live" | "down" = "down";
   private changeListeners = new Set<(changes: Change[]) => void>();
+  /** Every load gets a sequence number; results older than the latest replace load are dropped. */
+  private loadSeq = 0;
+  private replaceSeq = 0;
+  private lastSnapshot: Snapshot | null = null;
+  private downSince = 0;
 
   constructor(private tableCode?: string) {
     this.backend = createBackend(tableCode);
@@ -103,16 +108,28 @@ export class DelujClient {
 
   private async load(first = false, replace = false): Promise<void> {
     if (this.loading && !replace) return this.loading;
+    const seq = ++this.loadSeq;
+    if (replace) this.replaceSeq = seq;
     const run = (async () => {
       try {
         const startedAt = Date.now();
         const snapshot = await this.backend.load();
         if (this.stopped) return;
+        const current = this.snap.data;
+        // A slower snapshot that started before a reset must not resurrect the old run.
+        if (seq < this.replaceSeq) return;
+        if (current && snapshot.state.meta.resetVersion < current.meta.resetVersion) return;
         const rtt = Date.now() - startedAt;
         const clockOffset = snapshot.serverTime + rtt / 2 - Date.now();
-        const data = !replace && this.snap.data && this.snap.data.meta.resetVersion === snapshot.state.meta.resetVersion
-          ? mergeSnapshot(this.snap.data, snapshot.state)
-          : snapshot.state;
+        // Same demo run (same reset and same seeding, e.g. not a restarted local server) → merge.
+        const sameRun =
+          !replace &&
+          current &&
+          current.meta.resetVersion === snapshot.state.meta.resetVersion &&
+          current.meta.seededAt === snapshot.state.meta.seededAt;
+        const data = sameRun ? mergeSnapshot(current, snapshot.state) : snapshot.state;
+        const arrived = sameRun ? diffArrivals(current, data) : [];
+        this.lastSnapshot = snapshot;
         this.set({
           ready: true,
           data,
@@ -122,6 +139,8 @@ export class DelujClient {
           loadFailed: false,
           link: this.backend.mode === "local" ? "local" : this.liveStatus === "live" ? "live" : this.snap.link === "connecting" ? "connecting" : this.snap.link,
         });
+        // Rows that only reached us through a resync or polling still get their chime and highlight.
+        if (arrived.length) for (const l of this.changeListeners) l(arrived);
         if (first) this.startLive(snapshot);
       } catch {
         if (this.stopped) return;
@@ -145,10 +164,13 @@ export class DelujClient {
     this.stopLive = this.backend.subscribe(snapshot, {
       onChanges: (changes) => this.applyRemote(changes),
       onReset: () => void this.load(false, true),
+      onResync: () => void this.load(),
       onStatus: (status) => {
         const was = this.liveStatus;
         this.liveStatus = status;
+        if (status === "down" && was === "live") this.downSince = Date.now();
         if (status === "live") {
+          this.downSince = 0;
           this.set({ link: this.backend.mode === "local" ? "local" : "live" });
           if (this.pollTimer) clearTimeout(this.pollTimer);
           this.pollTimer = null;
@@ -169,10 +191,16 @@ export class DelujClient {
   /** While the live socket is down, poll the snapshot so screens stay current. */
   private schedulePoll() {
     if (this.pollTimer || this.stopped) return;
+    this.downSince ||= Date.now();
     this.pollTimer = setTimeout(async () => {
       this.pollTimer = null;
       if (this.liveStatus === "live" || this.stopped) return;
       await this.load();
+      // Still no live stream after a while on a working connection: start a fresh one.
+      if (this.liveStatus === "down" && this.lastSnapshot && navigator.onLine && Date.now() - this.downSince > 25_000) {
+        this.downSince = Date.now();
+        this.startLive(this.lastSnapshot);
+      }
       this.schedulePoll();
     }, 4000);
   }
@@ -256,6 +284,24 @@ export class DelujClient {
   refresh() {
     return this.load(false, true);
   }
+}
+
+/** Orders, requests and activity that are new or changed between two states of the same run. */
+export function diffArrivals(before: DemoState, after: DemoState): Change[] {
+  const out: Change[] = [];
+  const prevOrders = new Map(before.orders.map((o) => [o.id, o]));
+  for (const o of after.orders) {
+    const p = prevOrders.get(o.id);
+    if (!p || p.status !== o.status || p.updatedAt !== o.updatedAt) out.push({ table: "orders", op: "upsert", row: o });
+  }
+  const prevRequests = new Map(before.requests.map((r) => [r.id, r]));
+  for (const r of after.requests) {
+    const p = prevRequests.get(r.id);
+    if (!p || p.status !== r.status || p.updatedAt !== r.updatedAt) out.push({ table: "requests", op: "upsert", row: r });
+  }
+  const prevActivity = new Set(before.activity.map((a) => a.id));
+  for (const a of after.activity) if (!prevActivity.has(a.id)) out.push({ table: "activity", op: "upsert", row: a });
+  return out;
 }
 
 /** Merge a fresh snapshot into current state, keeping the newest version of every row. */

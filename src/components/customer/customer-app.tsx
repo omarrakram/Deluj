@@ -61,10 +61,14 @@ function Customer({ tableCode }: { tableCode: string }) {
     if (hydrated && resetVersion !== undefined) syncResetVersion(resetVersion);
   }, [hydrated, resetVersion, syncResetVersion]);
 
-  // Let the team know the table is browsing (once per visit window).
+  // Let the team know the table is browsing: once per page visit (and per 10-minute window),
+  // keyed by the demo run so a fresh scan after a reset counts again. A reset while this page
+  // stays open must not mark the table busy again, so only the first known run is used.
+  const openedRef = useRef(false);
   useEffect(() => {
-    if (!ready) return;
-    const key = `deluj:opened:${tableCode}`;
+    if (!ready || resetVersion === undefined || openedRef.current) return;
+    openedRef.current = true;
+    const key = `deluj:opened:${tableCode}:${resetVersion}`;
     try {
       const last = Number(localStorage.getItem(key) ?? 0);
       if (Date.now() - last < 10 * 60_000) return;
@@ -73,7 +77,7 @@ function Customer({ tableCode }: { tableCode: string }) {
       /* ignore */
     }
     void client.send({ type: "openTable", tableCode });
-  }, [ready, client, tableCode]);
+  }, [ready, client, tableCode, resetVersion]);
 
   const myOrders = useMemo(
     () => (data?.orders ?? []).filter((o) => guest.orderIds.includes(o.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),

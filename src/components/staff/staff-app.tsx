@@ -60,8 +60,14 @@ function Kitchen() {
   }, []);
 
   // Remember what was already on the board so only genuinely new arrivals chime.
+  // A demo reset starts a new board: everything on it then counts as already seen.
+  const seenRun = useRef<number | null>(null);
   useEffect(() => {
-    if (data && !seen.current) seen.current = new Set([...data.orders.map((o) => o.id), ...data.requests.map((r) => r.id)]);
+    if (!data) return;
+    if (!seen.current || seenRun.current !== data.meta.resetVersion) {
+      seen.current = new Set([...data.orders.map((o) => o.id), ...data.requests.map((r) => r.id)]);
+      seenRun.current = data.meta.resetVersion;
+    }
   }, [data]);
 
   const { play } = chime;
@@ -70,9 +76,10 @@ function Kitchen() {
       client.onChanges((changes) => {
         if (!seen.current) return;
         for (const c of changes) {
+          // Only live guest activity alerts the kitchen — never rows re-seeded by a demo reset.
           if (c.table === "orders" && !seen.current.has(c.row.id)) {
             seen.current.add(c.row.id);
-            if (c.row.status === "new") {
+            if (c.row.status === "new" && c.row.source === "live") {
               play("order");
               setFresh((f) => ({ ...f, [c.row.id]: Date.now() }));
               setBanner({
@@ -84,7 +91,7 @@ function Kitchen() {
           }
           if (c.table === "requests" && !seen.current.has(c.row.id)) {
             seen.current.add(c.row.id);
-            if (c.row.status === "open") {
+            if (c.row.status === "open" && c.row.source === "live") {
               play("request");
               setFresh((f) => ({ ...f, [c.row.id]: Date.now() }));
               setBanner({ id: c.row.id, title: `${tableLabel(c.row.tableCode)} · ${SERVICE_KIND_META[c.row.kind].label}`, body: "Just now" });

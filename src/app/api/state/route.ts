@@ -13,7 +13,11 @@ export async function GET(request: Request) {
   }
   const repo = getRepo();
   try {
-    const state = await repo.snapshot({ tableCode: tableCode ?? undefined });
+    // Answer within 7 s even if the database stalls, so screens fall back to polling quickly.
+    const state = await Promise.race([
+      repo.snapshot({ tableCode: tableCode ?? undefined }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("snapshot timed out")), 7_000)),
+    ]);
     const supabase =
       repo.transport === "supabase"
         ? { url: env.supabaseUrl()!, anonKey: env.supabaseAnonKey()! }

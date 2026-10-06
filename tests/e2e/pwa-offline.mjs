@@ -30,6 +30,23 @@ try {
   await other.getByText(/lost the connection|couldn't find that table/).first().waitFor({ timeout: 15000 });
   console.log("  ✓ an uncached page shows the branded offline page");
 
+  // The in-app offline mode must start every screen with zero network, including
+  // screens this device has never opened (their chunks were precached at install).
+  const owner = await ctx.newPage();
+  await owner.goto(`${BASE}/owner?offline=1`).catch(() => {});
+  await owner.getByText("Offline mode").first().waitFor({ timeout: 15000 });
+  await owner.getByTestId("kpi-orders-value").waitFor({ timeout: 15000 });
+  console.log("  ✓ offline mode starts the owner dashboard with no network");
+  const staff = await ctx.newPage();
+  await staff.setViewportSize({ width: 1180, height: 820 }); // the kitchen runs on the iPad
+  await staff.goto(`${BASE}/staff`).catch(() => {});
+  await staff.getByText("Guest requests").first().waitFor({ timeout: 15000 });
+  await staff.getByText("Offline mode").first().waitFor({ timeout: 15000 });
+  console.log("  ✓ ...and the kitchen display, never opened online on this device");
+  await owner.close();
+  await staff.close();
+  await page.evaluate(() => localStorage.removeItem("deluj:offline-mode"));
+
   await ctx.setOffline(false);
   await page.reload();
   await page.getByText("Live", { exact: true }).first().waitFor({ timeout: 20000 });

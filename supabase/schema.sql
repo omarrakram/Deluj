@@ -101,10 +101,22 @@ alter table public.activity         enable row level security;
 alter table public.table_sessions   enable row level security;
 alter table public.demo_meta        enable row level security;
 
+grant usage on schema public to anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant usage on schema public to service_role;
+  end if;
+end $$;
+
 do $$
 declare t text;
 begin
   foreach t in array array['menu_items', 'orders', 'service_requests', 'activity', 'table_sessions', 'demo_meta'] loop
+    -- The server writes with the service role: grant it explicitly rather than relying
+    -- on a project's default privileges (which can be switched off).
+    if exists (select 1 from pg_roles where rolname = 'service_role') then
+      execute format('grant select, insert, update, delete on public.%I to service_role', t);
+    end if;
     execute format('drop policy if exists "demo read" on public.%I', t);
     execute format('create policy "demo read" on public.%I for select to anon, authenticated using (true)', t);
     execute format('revoke insert, update, delete, truncate on public.%I from anon, authenticated', t);
@@ -160,10 +172,8 @@ begin
   end if;
   v_next := coalesce(v_current, 0) + 1;
 
-  delete from public.activity where true;
-  delete from public.service_requests where true;
-  delete from public.orders where true;
-  delete from public.table_sessions where true;
+  -- TRUNCATE (unlike DELETE) is not streamed row by row to every open screen.
+  truncate public.activity, public.service_requests, public.orders, public.table_sessions;
 
   insert into public.menu_items
     select * from jsonb_populate_recordset(null::public.menu_items, p_state -> 'menu')

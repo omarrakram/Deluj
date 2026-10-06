@@ -21,19 +21,29 @@ export function Sheet({
   hideClose?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  // Parents re-render every second (live clocks) and pass a fresh onClose each
+  // time; keep it in a ref so the open-effect runs once per opening. Otherwise it
+  // re-runs every tick and steals focus from inputs (closing the iPhone keyboard).
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const t = setTimeout(() => panel.current?.focus(), 50);
+    const t = setTimeout(() => {
+      // Move focus into the dialog for keyboard users, but never away from a field inside it.
+      if (!panel.current?.contains(document.activeElement)) panel.current?.focus();
+    }, 50);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
       clearTimeout(t);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>

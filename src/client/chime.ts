@@ -27,59 +27,78 @@ function playTones(ctx: AudioContext, kind: Kind) {
   });
 }
 
+function readPref(): boolean {
+  try {
+    return localStorage.getItem(PREF) === "on";
+  } catch {
+    return false;
+  }
+}
+
+function writePref(on: boolean) {
+  try {
+    localStorage.setItem(PREF, on ? "on" : "off");
+  } catch {
+    /* ignore */
+  }
+}
+
 export function useChime() {
   const [enabled, setEnabled] = useState(false);
+  const enabledRef = useRef(false);
   const ctx = useRef<AudioContext | null>(null);
 
-  useEffect(() => {
-    let wanted = false;
+  /** Create or wake the audio context (iOS suspends it after sleep or backgrounding). */
+  const audio = useCallback((): AudioContext | null => {
     try {
-      wanted = localStorage.getItem(PREF) === "on";
+      ctx.current ??= new AudioContext();
+      if (ctx.current.state !== "running") void ctx.current.resume();
+      return ctx.current;
     } catch {
-      /* ignore */
+      return null;
     }
-    if (!wanted) return;
-    // Remembered preference: arm on the first tap anywhere.
-    const arm = () => {
-      try {
-        ctx.current ??= new AudioContext();
-        void ctx.current.resume();
-        setEnabled(true);
-      } catch {
-        /* no audio support */
-      }
-    };
-    window.addEventListener("pointerdown", arm, { once: true });
-    return () => window.removeEventListener("pointerdown", arm);
   }, []);
 
-  const toggle = useCallback(() => {
-    setEnabled((on) => {
-      const next = !on;
-      try {
-        localStorage.setItem(PREF, next ? "on" : "off");
-        if (next) {
-          ctx.current ??= new AudioContext();
-          void ctx.current.resume();
-          playTones(ctx.current, "request");
-        }
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
+  const apply = useCallback((on: boolean) => {
+    enabledRef.current = on;
+    setEnabled(on);
   }, []);
+
+  useEffect(() => {
+    if (!readPref()) return;
+    // Remembered preference: browsers need a tap before sound, so arm on the first
+    // tap anywhere — except on the chime button itself, which handles its own tap.
+    const arm = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest?.('[data-testid="chime-toggle"]')) return;
+      window.removeEventListener("pointerdown", arm);
+      if (readPref() && audio()) apply(true);
+    };
+    window.addEventListener("pointerdown", arm);
+    return () => window.removeEventListener("pointerdown", arm);
+  }, [audio, apply]);
+
+  const toggle = useCallback(() => {
+    const next = !enabledRef.current;
+    writePref(next);
+    if (next) {
+      const c = audio();
+      if (c) playTones(c, "request");
+    }
+    apply(next);
+  }, [audio, apply]);
 
   const play = useCallback(
     (kind: Kind) => {
-      if (!enabled || !ctx.current) return;
+      if (!enabledRef.current) return;
+      const c = audio();
+      if (!c) return;
       try {
-        playTones(ctx.current, kind);
+        playTones(c, kind);
       } catch {
         /* ignore */
       }
     },
-    [enabled],
+    [audio],
   );
 
   return { enabled, toggle, play };
