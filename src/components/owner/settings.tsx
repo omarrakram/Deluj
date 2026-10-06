@@ -8,6 +8,18 @@ import type { LinkStatus } from "@/client/store";
 import { Sheet } from "@/components/ui/sheet";
 import { LinkDot } from "@/components/ui/link-status";
 
+function HostedMemoryWarning() {
+  const [host] = useState(() => (typeof window === "undefined" ? "" : window.location.hostname));
+  const local = !host || host === "localhost" || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host.endsWith(".local");
+  if (local) return null;
+  return (
+    <p className="mt-4 rounded-2xl bg-amber-soft px-4 py-3 text-sm font-semibold text-amber">
+      Supabase isn&apos;t configured on this deployment, so devices only stay in sync while they reach the same server instance. Add the Supabase
+      environment variables for a reliable multi-device demo.
+    </p>
+  );
+}
+
 const BACKEND_COPY = {
   supabase: { title: "Supabase Realtime", body: "Shared Postgres database. Every phone, tablet and laptop sees the same live state." },
   memory: { title: "Deluj local server", body: "This server keeps the live state in memory and streams it to every connected device." },
@@ -47,6 +59,7 @@ export function SettingsPanel({
           </div>
           <LinkDot status={link} />
         </div>
+        {backend === "memory" && <HostedMemoryWarning />}
       </section>
 
       <section className="rounded-3xl bg-white p-5 shadow-soft">

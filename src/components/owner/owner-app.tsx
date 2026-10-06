@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Activity, LayoutGrid, Settings, Sparkles, UtensilsCrossed } from "lucide-react";
 import { DelujProvider, useDeluj, useNow } from "@/client/store";
+import { useWakeLock } from "@/client/wake-lock";
 import { Wordmark } from "@/components/brand/logo";
 import { LinkDot } from "@/components/ui/link-status";
 import { ToastProvider, useToast } from "@/components/ui/toast";
@@ -54,6 +55,7 @@ function CommandCenter() {
   const now = useNow(15_000);
   const clock = useNow(1000);
   const toast = useToast();
+  useWakeLock();
   const [tab, setTab] = useState<Tab>("overview");
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const [flashItems, setFlashItems] = useState<Set<string>>(new Set());

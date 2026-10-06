@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BellRing, Moon, Sun, Volume2, VolumeX } from "lucide-react";
 import { DelujProvider, useDeluj, useNow } from "@/client/store";
 import { useChime } from "@/client/chime";
+import { useWakeLock } from "@/client/wake-lock";
 import { Wordmark } from "@/components/brand/logo";
 import { LinkDot } from "@/components/ui/link-status";
 import { ToastProvider, useToast } from "@/components/ui/toast";
@@ -42,6 +43,7 @@ function Kitchen() {
   const now = useNow(1000);
   const chime = useChime();
   const toast = useToast();
+  useWakeLock();
   const [dark, setDark] = useState(false);
   const [tab, setTab] = useState<ColumnId | "requests">("new");
   const [fresh, setFresh] = useState<Record<string, number>>({});
