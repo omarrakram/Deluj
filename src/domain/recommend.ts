@@ -129,10 +129,8 @@ export function recommend(input: RecommendInput): Recommendation[] {
     // Fill the gap in the order: drinks-only carts want food and vice versa.
     if (course === "food" && hasDrink && !hasFood) score += 0.3;
     if (course === "drink" && hasFood && !hasDrink) score += 0.3;
-    // Never push a second drink onto a drink, or a second main onto a main.
-    if (!sweetFinish && anchors[0] && course === courseOf(anchors[0].category)) score -= 0.6;
-    if (!sweetFinish && course === "food" && hasFood) score -= 0.25;
-    if (course === "drink" && hasDrink) score -= 0.25;
+    // Right after adding something, orbit it: a drink suggests food, food suggests a drink.
+    if (!sweetFinish && anchorItemId && anchors[0] && course === courseOf(anchors[0].category)) score -= 0.6;
     if (sweetFinish) score += 0.45;
     score += timeBoost(candidate, hour);
     if (candidate.featured) score += 0.03;
