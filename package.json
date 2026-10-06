@@ -14,7 +14,8 @@
     "test:resilience": "node tests/e2e/resilience.mjs",
     "test:offline": "node tests/e2e/offline-mode.mjs",
     "verify:production": "node scripts/verify-production.mjs",
-    "demo:start": "node scripts/demo-start.mjs"
+    "demo:start": "node scripts/demo-start.mjs",
+    "test:pwa": "node tests/e2e/pwa-offline.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
