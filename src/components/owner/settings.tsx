@@ -104,7 +104,7 @@ export function SettingsPanel({
             <button
               onClick={() => {
                 setOfflineMode(false);
-                window.location.href = "/owner?offline=0";
+                window.location.reload();
               }}
               className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-powder px-5 text-sm font-bold text-ink"
             >
@@ -114,7 +114,7 @@ export function SettingsPanel({
             <button
               onClick={() => {
                 setOfflineMode(true);
-                window.location.href = "/owner?offline=1";
+                window.location.reload();
               }}
               className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold shadow-soft"
             >

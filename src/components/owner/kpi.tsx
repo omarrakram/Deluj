@@ -32,7 +32,6 @@ export function KpiTile({
     const delta = value - prev.current;
     prev.current = value;
     if (Math.abs(delta) < 1e-9) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to a live value change
     setBump({ id: Date.now(), delta });
     const t = setTimeout(() => setBump(null), 2600);
     return () => clearTimeout(t);
